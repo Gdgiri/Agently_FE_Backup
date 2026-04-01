@@ -33,6 +33,9 @@ export const staffApi = {
     create: (data: { name: string; phoneNumber: string; role: string }) =>
         apiClient.post('/staff', data),
 
+    update: (id: string, data: { name?: string; phoneNumber?: string; role?: string }) =>
+        apiClient.patch(`/staff/${id}`, data),
+
     delete: (id: string) =>
         apiClient.delete(`/staff/${id}`),
 };

@@ -4,7 +4,7 @@ import {
     Plus, Search, Filter, LayoutGrid, List, Edit2, 
     MapPin, User, ChevronRight, X, Upload, Trash2, 
     Home, Car, Building2, Smartphone, Loader2,
-    Calendar, Maximize2, Camera, Database
+    Calendar, Maximize2, Camera, Database, Settings2, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SectionHeader, Card, Button, Input, Badge, cn } from '../components/ui';
@@ -31,6 +31,15 @@ const ProductListing: React.FC = () => {
     const [newCategoryName, setNewCategoryName] = useState('');
     const [allCategories, setAllCategories] = useState<Category[]>([]);
     const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>('all');
+    const [isManagingCategories, setIsManagingCategories] = useState(false);
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [editingCategoryName, setEditingCategoryName] = useState('');
+    const [productTypes, setProductTypes] = useState<string[]>([]);
+    const [isManagingTypes, setIsManagingTypes] = useState(false);
+    const [isCreatingType, setIsCreatingType] = useState(false);
+    const [newTypeName, setNewTypeName] = useState('');
+    const [editingTypeOldName, setEditingTypeOldName] = useState<string | null>(null);
+    const [editingTypeNewName, setEditingTypeNewName] = useState('');
 
     interface ProductForm extends Partial<Product> {
         bedrooms?: number;
@@ -82,6 +91,10 @@ const ProductListing: React.FC = () => {
         try {
             const { data } = await categoryApi.getAll();
             setAllCategories(data);
+            
+            // Also fetch unique types
+            const { data: types } = await categoryApi.getTypes();
+            setProductTypes(types);
         } catch (error) {
             console.error('Failed to fetch all categories', error);
         }
@@ -100,6 +113,92 @@ const ProductListing: React.FC = () => {
             setCategories(data);
         } catch (error) {
             console.error('Failed to fetch categories', error);
+        }
+    };
+
+    const handleDeleteCategory = async (id: string, name: string) => {
+        if (!window.confirm(`Delete category "${name}"? Products using this category will be detached.`)) return;
+        const toastId = toast.loading('Deleting category...');
+        try {
+            await categoryApi.delete(id);
+            toast.success('Category deleted', { id: toastId });
+            setCategories(prev => prev.filter(c => c.id !== id));
+            setAllCategories(prev => prev.filter(c => c.id !== id));
+            // Update form if this category was selected
+            if (formData.categoryId === id) {
+                setFormData(prev => ({ ...prev, categoryId: '' }));
+            }
+        } catch (error) {
+            toast.error('Failed to delete category', { id: toastId });
+        }
+    };
+
+    const handleUpdateCategory = async (id: string) => {
+        if (!editingCategoryName.trim()) return;
+        const toastId = toast.loading('Updating category...');
+        try {
+            const { data } = await categoryApi.update(id, { name: editingCategoryName, type: formData.category });
+            toast.success('Category updated', { id: toastId });
+            setCategories(prev => prev.map(c => c.id === id ? data : c));
+            setAllCategories(prev => prev.map(c => c.id === id ? data : c));
+            setEditingCategoryId(null);
+            setEditingCategoryName('');
+        } catch (error) {
+            toast.error('Failed to update category', { id: toastId });
+        }
+    };
+
+    const handleCreateType = async () => {
+        if (!newTypeName.trim()) return;
+        const toastId = toast.loading('Creating type...');
+        try {
+            // To create a type, we create a "General" category for it
+            const { data } = await categoryApi.create({ 
+                name: 'General', 
+                type: newTypeName 
+            });
+            toast.success('Type created', { id: toastId });
+            setProductTypes(prev => [...prev, newTypeName]);
+            setCategories(prev => [...prev, data]);
+            setAllCategories(prev => [...prev, data]);
+            setIsCreatingType(false);
+            setNewTypeName('');
+            setFormData(prev => ({ ...prev, category: newTypeName, categoryId: data.id }));
+        } catch (error) {
+            toast.error('Failed to create type', { id: toastId });
+        }
+    };
+
+    const handleUpdateType = async (oldName: string) => {
+        if (!editingTypeNewName.trim()) return;
+        const toastId = toast.loading('Renaming type...');
+        try {
+            await categoryApi.updateType(oldName, editingTypeNewName);
+            toast.success('Type renamed', { id: toastId });
+            setProductTypes(prev => prev.map(t => t === oldName ? editingTypeNewName : t));
+            if (formData.category === oldName) {
+                setFormData(prev => ({ ...prev, category: editingTypeNewName }));
+            }
+            setEditingTypeOldName(null);
+            setEditingTypeNewName('');
+        } catch (error) {
+            toast.error('Failed to rename type', { id: toastId });
+        }
+    };
+
+    const handleDeleteType = async (name: string) => {
+        if (!window.confirm(`Delete type "${name}"? ALL sub-categories will be deleted and products will be detached. This cannot be undone.`)) return;
+        const toastId = toast.loading('Deleting type...');
+        try {
+            await categoryApi.deleteType(name);
+            toast.success('Type deleted', { id: toastId });
+            setProductTypes(prev => prev.filter(t => t !== name));
+            setAllCategories(prev => prev.filter(c => c.type !== name));
+            if (formData.category === name) {
+                setFormData(prev => ({ ...prev, category: '', categoryId: '' }));
+            }
+        } catch (error) {
+            toast.error('Failed to delete type', { id: toastId });
         }
     };
 
@@ -653,35 +752,128 @@ const ProductListing: React.FC = () => {
                                             value={formData.price}
                                             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                         />
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Type</label>
-                                            <select
-                                                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-4 focus:ring-[#25D366]/10 focus:border-[#25D366] transition-all"
-                                                value={formData.category}
-                                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                            >
-                                                <option>Apartment</option>
-                                                <option>House</option>
-                                                <option>Commercial</option>
-                                                <option>Car Reseller</option>
-                                                <option>Bike Reseller</option>
-                                                <option>Retailer</option>
-                                                <option>Electronics</option>
-                                            </select>
+                                        <div className="flex-1 space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Type</label>
+                                                <div className="flex items-center gap-2">
+                                                    {!isManagingTypes && !isCreatingType && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setIsManagingTypes(true)}
+                                                            className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 hover:text-gray-900"
+                                                            title="Manage Types"
+                                                        >
+                                                            <Settings2 size={12} /> Manage
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {isCreatingType ? (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="New Type (e.g. Services)"
+                                                        className="flex-1 px-4 py-2 bg-white border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#25D366]/20 focus:border-[#25D366] transition-all"
+                                                        value={newTypeName}
+                                                        onChange={(e) => setNewTypeName(e.target.value)}
+                                                        autoFocus
+                                                    />
+                                                    <Button size="sm" onClick={handleCreateType}>Save</Button>
+                                                    <Button variant="outline" size="sm" onClick={() => setIsCreatingType(false)}><X size={14} /></Button>
+                                                </div>
+                                            ) : isManagingTypes ? (
+                                                <div className="bg-gray-50/50 rounded-2xl border border-gray-100 p-4 space-y-3">
+                                                    <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-2">
+                                                        <span className="text-[10px] font-black uppercase text-gray-400">Manage Product Types</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <button type="button" onClick={() => setIsCreatingType(true)} className="text-[10px] font-black text-[#25D366] uppercase tracking-widest flex items-center gap-1 hover:opacity-70">
+                                                                <PlusCircle size={12} /> Add New
+                                                            </button>
+                                                            <button type="button" onClick={() => setIsManagingTypes(false)} className="text-gray-400 hover:text-gray-900"><X size={14} /></button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                                        {productTypes.map(type => (
+                                                            <div key={type} className="flex items-center justify-between gap-3 p-2 bg-white rounded-xl border border-gray-50 group">
+                                                                {editingTypeOldName === type ? (
+                                                                    <div className="flex-1 flex gap-2">
+                                                                        <input 
+                                                                            type="text"
+                                                                            value={editingTypeNewName}
+                                                                            onChange={(e) => setEditingTypeNewName(e.target.value)}
+                                                                            className="flex-1 bg-gray-50 text-[11px] font-bold px-2 py-1 rounded-lg outline-none ring-1 ring-[#25D366] focus:ring-2"
+                                                                            autoFocus
+                                                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateType(type)}
+                                                                        />
+                                                                        <button type="button" onClick={() => handleUpdateType(type)} className="text-[#25D366]"><Check size={14} /></button>
+                                                                        <button type="button" onClick={() => setEditingTypeOldName(null)} className="text-gray-400"><X size={14} /></button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="text-[11px] font-black text-gray-700">{type}</span>
+                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                            <button 
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setEditingTypeOldName(type);
+                                                                                    setEditingTypeNewName(type);
+                                                                                }} 
+                                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900"
+                                                                            >
+                                                                                <Edit2 size={12} />
+                                                                            </button>
+                                                                            <button 
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteType(type)} 
+                                                                                className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-4 focus:ring-[#25D366]/10 focus:border-[#25D366] transition-all"
+                                                    value={formData.category}
+                                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                                >
+                                                    <option value="">Select Type</option>
+                                                    {productTypes.map(type => (
+                                                        <option key={type} value={type}>{type}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 gap-6">
                                         <div className="space-y-1.5">
                                             <div className="flex items-center justify-between">
                                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Category (Sub-type)</label>
-                                                {!isCreatingCategory && (
-                                                    <button 
-                                                        onClick={() => setIsCreatingCategory(true)}
-                                                        className="text-[10px] font-black text-[#25D366] uppercase tracking-widest flex items-center gap-1 hover:opacity-70"
-                                                    >
-                                                        <PlusCircle size={12} /> Add New
-                                                    </button>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    {!isCreatingCategory && !isManagingCategories && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => setIsManagingCategories(true)}
+                                                                className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 hover:text-gray-900"
+                                                                title="Manage Categories"
+                                                            >
+                                                                <Settings2 size={12} /> Manage
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => setIsCreatingCategory(true)}
+                                                                className="text-[10px] font-black text-[#25D366] uppercase tracking-widest flex items-center gap-1 hover:opacity-70"
+                                                            >
+                                                                <PlusCircle size={12} /> Add New
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                             
                                             {isCreatingCategory ? (
@@ -706,6 +898,7 @@ const ProductListing: React.FC = () => {
                                                                 });
                                                                 toast.success('Category created', { id: toastId });
                                                                 setCategories(prev => [...prev, data]);
+                                                                setAllCategories(prev => [...prev, data]);
                                                                 setFormData(prev => ({ ...prev, categoryId: data.id }));
                                                                 setIsCreatingCategory(false);
                                                                 setNewCategoryName('');
@@ -726,6 +919,55 @@ const ProductListing: React.FC = () => {
                                                     >
                                                         <X size={14} />
                                                     </Button>
+                                                </div>
+                                            ) : isManagingCategories ? (
+                                                <div className="bg-gray-50/50 rounded-2xl border border-gray-100 p-4 space-y-3">
+                                                    <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-2">
+                                                        <span className="text-[10px] font-black uppercase text-gray-400">Manage {formData.category} Sub-types</span>
+                                                        <button onClick={() => setIsManagingCategories(false)} className="text-gray-400 hover:text-gray-900"><X size={14} /></button>
+                                                    </div>
+                                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                                        {categories.length === 0 && <p className="text-center py-4 text-[10px] text-gray-400 font-bold uppercase italic">No sub-types found</p>}
+                                                        {categories.map(cat => (
+                                                            <div key={cat.id} className="flex items-center justify-between gap-3 p-2 bg-white rounded-xl border border-gray-50 group">
+                                                                {editingCategoryId === cat.id ? (
+                                                                    <div className="flex-1 flex gap-2">
+                                                                        <input 
+                                                                            type="text"
+                                                                            value={editingCategoryName}
+                                                                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                                                                            className="flex-1 bg-gray-50 text-[11px] font-bold px-2 py-1 rounded-lg outline-none ring-1 ring-[#25D366] focus:ring-2"
+                                                                            autoFocus
+                                                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory(cat.id)}
+                                                                        />
+                                                                        <button onClick={() => handleUpdateCategory(cat.id)} className="text-[#25D366]"><Check size={14} /></button>
+                                                                        <button onClick={() => setEditingCategoryId(null)} className="text-gray-400"><X size={14} /></button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="text-[11px] font-black text-gray-700">{cat.name}</span>
+                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                                            <button 
+                                                                                onClick={() => {
+                                                                                    setEditingCategoryId(cat.id);
+                                                                                    setEditingCategoryName(cat.name);
+                                                                                }} 
+                                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900"
+                                                                            >
+                                                                                <Edit2 size={12} />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => handleDeleteCategory(cat.id, cat.name)} 
+                                                                                className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <select

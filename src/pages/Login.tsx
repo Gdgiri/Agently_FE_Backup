@@ -174,7 +174,7 @@ const Login: React.FC = () => {
                         </div>
                     </form>
 
-                    {/* Demo Credentials Hint */}
+                    {/* Demo Credentials Hint - Commented out
                     {isLogin && (
                         <div className="p-4 bg-[#25D366]/5 border border-[#25D366]/20 rounded-2xl">
                             <p className="text-xs font-bold text-gray-600">
@@ -182,7 +182,9 @@ const Login: React.FC = () => {
                             </p>
                         </div>
                     )}
+                    */}
 
+                    {/* Social Login - Hidden for now
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
                         <div className="relative flex justify-center text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">
@@ -206,6 +208,7 @@ const Login: React.FC = () => {
                             Meta ID
                         </button>
                     </div>
+                    */}
 
                     <div className="text-center pt-8">
                         <button
@@ -214,7 +217,7 @@ const Login: React.FC = () => {
                         >
                             {isLogin ? "Don't have an account? " : "Already have an account? "}
                             <span className="text-[#25D366] font-black">
-                                {isLogin ? "Sign up for 14-day trial" : "Log in to console"}
+                                {isLogin ? "Sign up" : "Log in to console"}
                             </span>
                         </button>
                     </div>

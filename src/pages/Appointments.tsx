@@ -15,6 +15,7 @@ import {
     CheckCircle2,
     X,
     PlusCircle,
+    Edit2,
     Hash,
     Filter,
     Users,
@@ -62,6 +63,7 @@ const Appointments: React.FC = () => {
 
     const [isStaffManagerOpen, setIsStaffManagerOpen] = useState(false);
     const [staffTab, setStaffTab] = useState<'list' | 'create'>('list');
+    const [editingStaff, setEditingStaff] = useState<any | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -130,13 +132,22 @@ const Appointments: React.FC = () => {
 
     const handleAddStaff = async (name: string, phoneNumber: string, role: string) => {
         try {
-            const { data } = await staffApi.create({ name, phoneNumber, role });
-            if (data.success) {
-                setStaff(prev => [...prev, data.data]);
-                toast.success('Staff added');
+            if (editingStaff) {
+                const { data } = await staffApi.update(editingStaff.id, { name, phoneNumber, role });
+                if (data.success) {
+                    setStaff(prev => prev.map(s => s.id === editingStaff.id ? data.data : s));
+                    toast.success('Staff updated');
+                    setEditingStaff(null);
+                }
+            } else {
+                const { data } = await staffApi.create({ name, phoneNumber, role });
+                if (data.success) {
+                    setStaff(prev => [...prev, data.data]);
+                    toast.success('Staff added');
+                }
             }
         } catch (error) {
-            toast.error('Failed to add staff');
+            toast.error(editingStaff ? 'Failed to update staff' : 'Failed to add staff');
         }
     };
 
@@ -700,22 +711,35 @@ const Appointments: React.FC = () => {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (confirm(`Remove ${s.name}?`)) {
-                                                                    try {
-                                                                        await staffApi.delete(s.id);
-                                                                        setStaff(prev => prev.filter(item => item.id !== s.id));
-                                                                        toast.success('Staff member removed');
-                                                                    } catch (e) {
-                                                                        toast.error('Failed to remove staff');
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingStaff(s);
+                                                                    setStaffTab('create');
+                                                                }}
+                                                                className="p-2 text-gray-300 hover:text-[#25D366] hover:bg-[#25D366]/5 rounded-xl transition-all"
+                                                                title="Edit Hero"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (confirm(`Remove ${s.name}?`)) {
+                                                                        try {
+                                                                            await staffApi.delete(s.id);
+                                                                            setStaff(prev => prev.filter(item => item.id !== s.id));
+                                                                            toast.success('Staff member removed');
+                                                                        } catch (e) {
+                                                                            toast.error('Failed to remove staff');
+                                                                        }
                                                                     }
-                                                                }
-                                                            }}
-                                                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                                }}
+                                                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                                title="Delete Hero"
+                                                            >
+                                                                    <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 {staff.length === 0 && (
@@ -736,8 +760,12 @@ const Appointments: React.FC = () => {
                                         >
                                             <div className="p-8 bg-[#25D366]/5 rounded-[2.5rem] border border-dashed border-[#25D366]/20 relative overflow-hidden">
                                                 <div className="absolute -top-4 -right-4 p-8 opacity-10 group-hover:scale-110 transition-transform"><PlusCircle size={120} /></div>
-                                                <h5 className="text-[10px] font-black text-[#25D366] uppercase tracking-widest mb-1">New Expert Registration</h5>
-                                                <p className="text-sm font-black text-gray-900 mb-8 leading-tight">Fill in the details to onboard <br /> a new team member.</p>
+                                                <h5 className="text-[10px] font-black text-[#25D366] uppercase tracking-widest mb-1">
+                                                    {editingStaff ? 'Edit Expert Profile' : 'New Expert Registration'}
+                                                </h5>
+                                                <p className="text-sm font-black text-gray-900 mb-8 leading-tight">
+                                                    {editingStaff ? `Update details for ${editingStaff.name}.` : 'Fill in the details to onboard \n a new team member.'}
+                                                </p>
 
                                                 <form className="space-y-6" onSubmit={async (e) => {
                                                     e.preventDefault();
@@ -752,16 +780,35 @@ const Appointments: React.FC = () => {
                                                     <div className="space-y-5">
                                                         <div className="space-y-1.5 flex flex-col items-start w-full">
                                                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Hero Name</label>
-                                                            <Input name="staffName" placeholder="e.g. Alex Rivera" required className="bg-white border-none shadow-sm h-14" />
+                                                            <Input 
+                                                                name="staffName" 
+                                                                placeholder="e.g. Alex Rivera" 
+                                                                required 
+                                                                className="bg-white border-none shadow-sm h-14" 
+                                                                defaultValue={editingStaff?.name || ''}
+                                                                key={`name-${editingStaff?.id || 'new'}`}
+                                                            />
                                                         </div>
                                                         <div className="grid grid-cols-1 gap-5">
                                                             <div className="space-y-1.5 flex flex-col items-start w-full">
                                                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Phone Number</label>
-                                                                <Input name="phoneNumber" placeholder="91..." required className="bg-white border-none shadow-sm h-14" />
+                                                                <Input 
+                                                                    name="phoneNumber" 
+                                                                    placeholder="91..." 
+                                                                    required 
+                                                                    className="bg-white border-none shadow-sm h-14" 
+                                                                    defaultValue={editingStaff?.phoneNumber || ''}
+                                                                    key={`phone-${editingStaff?.id || 'new'}`}
+                                                                />
                                                             </div>
                                                             <div className="space-y-1.5 flex flex-col items-start w-full">
                                                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Designation</label>
-                                                                <select name="role" className="w-full px-4 h-14 bg-white border-none shadow-sm rounded-xl text-sm font-bold outline-none ring-1 ring-gray-100 focus:ring-2 focus:ring-[#25D366] transition-all">
+                                                                <select 
+                                                                    name="role" 
+                                                                    className="w-full px-4 h-14 bg-white border-none shadow-sm rounded-xl text-sm font-bold outline-none ring-1 ring-gray-100 focus:ring-2 focus:ring-[#25D366] transition-all"
+                                                                    defaultValue={editingStaff?.role || 'Agent'}
+                                                                    key={`role-${editingStaff?.id || 'new'}`}
+                                                                >
                                                                     <option value="Agent">Agent</option>
                                                                     <option value="Sales Lead">Sales Lead</option>
                                                                     <option value="Admin">Admin</option>
@@ -770,7 +817,7 @@ const Appointments: React.FC = () => {
                                                         </div>
                                                     </div>
                                                     <Button type="submit" className="w-full h-14 bg-gray-900 border-none hover:bg-black shadow-xl mt-4 rounded-2xl flex items-center justify-center gap-3">
-                                                        <Zap size={18} className="text-[#25D366]" /> Complete Onboarding
+                                                        <Zap size={18} className="text-[#25D366]" /> {editingStaff ? 'Save Changes' : 'Complete Onboarding'}
                                                     </Button>
                                                 </form>
                                             </div>

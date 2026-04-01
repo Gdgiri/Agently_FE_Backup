@@ -19,5 +19,15 @@ export const categoryApi = {
         apiClient.put<Category>(`/categories/${id}`, data),
 
     delete: (id: string) =>
-        apiClient.delete(`/categories/${id}`)
+        apiClient.delete(`/categories/${id}`),
+
+    // Type-level Management
+    getTypes: () =>
+        apiClient.get<string[]>('/categories/types'),
+
+    updateType: (oldName: string, newName: string) =>
+        apiClient.patch(`/categories/type/${oldName}`, { newName }),
+
+    deleteType: (name: string) =>
+        apiClient.delete(`/categories/type/${name}`)
 };
