@@ -1,0 +1,53 @@
+MISMATCH at line 488: Expected </SectionHeader> (from line 463) but found </div>
+MISMATCH at line 536: Expected </div> (from line 533) but found </Card>
+MISMATCH at line 537: Expected </Card> (from line 527) but found </div>
+MISMATCH at line 592: Expected </Input> (from line 582) but found </div>
+MISMATCH at line 630: Expected </Input> (from line 612) but found </div>
+MISMATCH at line 646: Expected </textarea> (from line 638) but found </div>
+MISMATCH at line 678: Expected </div> (from line 632) but found </motion.div>
+MISMATCH at line 697: Expected </input> (from line 691) but found </div>
+MISMATCH at line 706: Expected </input> (from line 700) but found </div>
+MISMATCH at line 716: Expected </textarea> (from line 711) but found </div>
+MISMATCH at line 725: Expected </textarea> (from line 720) but found </div>
+MISMATCH at line 762: Expected </div> (from line 718) but found </motion.div>
+MISMATCH at line 840: Expected </div> (from line 709) but found </Card>
+MISMATCH at line 858: Expected </Input> (from line 852) but found </div>
+MISMATCH at line 868: Expected </textarea> (from line 862) but found </div>
+MISMATCH at line 885: Expected </div> (from line 850) but found </Card>
+MISMATCH at line 914: Expected </Input> (from line 907) but found </div>
+MISMATCH at line 925: Expected </Input> (from line 919) but found </div>
+MISMATCH at line 934: Expected </textarea> (from line 929) but found </div>
+MISMATCH at line 945: Expected </div> (from line 904) but found </Card>
+MISMATCH at line 1137: Expected </input> (from line 1129) but found </div>
+MISMATCH at line 1188: Expected </div> (from line 1111) but found </motion.div>
+MISMATCH at line 1190: Expected </motion.div> (from line 1063) but found </AnimatePresence>
+MISMATCH at line 1218: Expected </AnimatePresence> (from line 1061) but found </div>
+MISMATCH at line 1244: Expected </input> (from line 1223) but found </div>
+MISMATCH at line 1246: Expected </div> (from line 1221) but found </Card>
+MISMATCH at line 1248: Expected </Card> (from line 1033) but found </div>
+
+UNCLOSED TAGS:
+ - <PersonaConfig> from line 90
+ - <PersonaConfig> from line 97
+ - <ChatMessage> from line 102
+ - <Record> from line 106
+ - <HTMLDivElement> from line 107
+ - <BehaviorConfig> from line 110
+ - <CampaignOverride> from line 122
+ - <KBDocument> from line 130
+ - <CampaignOverride> from line 164
+ - <div> from line 462
+ - <div> from line 493
+ - <div> from line 540
+ - <div> from line 541
+ - <Card> from line 564
+ - <motion.div> from line 567
+ - <div> from line 573
+ - <div> from line 611
+ - <motion.div> from line 683
+ - <div> from line 688
+ - <div> from line 689
+ - <Card> from line 843
+ - <div> from line 849
+ - <Card> from line 888
+ - <div> from line 894

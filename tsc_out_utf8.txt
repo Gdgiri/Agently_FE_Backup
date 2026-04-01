@@ -1,0 +1,4 @@
+﻿src/lib/apiClient.ts(4,17): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', or 'nodenext'.
+src/lib/apiClient.ts(4,29): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/pages/ChatBot.tsx(1033,142): error TS2322: Type '{ children: Element[]; className: string; style: { height: string; }; }' is not assignable to type 'IntrinsicAttributes & { children: ReactNode; className?: string; }'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & { children: ReactNode; className?: string; }'.

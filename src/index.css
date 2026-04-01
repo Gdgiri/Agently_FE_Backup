@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-whatsapp-light: #25D366;
+  --color-whatsapp: #25D366;
+  --color-whatsapp-dark: #1ebe5d;
+
+  --font-sans: "Inter", "sans-serif";
+
+  --animate-spin-slow: spin 8s linear infinite;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #f9fafb !important;
+    @apply antialiased text-gray-900 selection:bg-[#25D366] selection:text-white;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  section[id] {
+    scroll-margin-top: 80px;
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Custom transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}

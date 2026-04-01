@@ -1,0 +1,23 @@
+
+import apiClient from '../apiClient';
+
+export interface Category {
+    id: string;
+    name: string;
+    type?: string;
+    tenantId: string;
+}
+
+export const categoryApi = {
+    getAll: (type?: string) =>
+        apiClient.get<Category[]>('/categories', { params: { type } }),
+
+    create: (data: { name: string, type?: string }) =>
+        apiClient.post<Category>('/categories', data),
+
+    update: (id: string, data: { name: string, type?: string }) =>
+        apiClient.put<Category>(`/categories/${id}`, data),
+
+    delete: (id: string) =>
+        apiClient.delete(`/categories/${id}`)
+};

@@ -1,0 +1,250 @@
+462: <div className="p-8 space-y-8 bg-[#f9fafb] min-h-full">
+467: <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
+479: <div className="w-12 h-6 bg-[#25D366] rounded-full relative p-1 shadow-inner shadow-green-900/10">
+480: <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-md" />
+481: </div>
+483: <div className="w-12 h-6 bg-gray-200 rounded-full relative p-1 shadow-inner">
+484: <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md" />
+485: </div>
+488: </div>
+493: <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+495: <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+497: </div>
+499: <div className="text-3xl font-black text-gray-900">{stats.totalRequests}</div>
+506: <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+508: </div>
+510: <div className="text-3xl font-black text-gray-900">{stats.avgResponseTime.toFixed(1)}s</div>
+517: <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+519: </div>
+521: <div className="text-3xl font-black text-gray-900">{stats.successRate.toFixed(0)}%</div>
+528: <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+530: </div>
+532: <div className="text-3xl font-black text-gray-900">{chatMessages.filter(m => m.role === 'user').length}</div>
+533: <div className="h-1.5 w-full bg-gray-100 rounded-full mt-4 overflow-hidden">
+534: <div className="h-full bg-[#25D366] transition-all duration-700" style={{ width: `${Math.min(chatMessages.filter(m => m.role === 'user').length * 10, 100)}%` }} />
+535: </div>
+537: </div>
+540: <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+541: <div className="lg:col-span-2 space-y-8">
+543: <div className="flex gap-4 p-1.5 bg-white rounded-2xl border border-gray-100 w-fit shadow-sm">
+562: </div>
+573: <div className="p-6 bg-blue-50/50 rounded-3xl border border-blue-100 space-y-6">
+574: <div className="flex items-center gap-2">
+577: </div>
+578: <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+579: <div className="space-y-1.5">
+581: <div className="relative">
+589: <div className="absolute right-3 top-1/2 -translate-y-1/2">
+591: </div>
+592: </div>
+594: </div>
+595: <div className="space-y-1.5">
+607: </div>
+608: </div>
+609: </div>
+611: <div className="grid grid-cols-2 gap-8">
+617: <div className="space-y-1.5">
+629: </div>
+630: </div>
+632: <div className="space-y-3">
+633: <div className="flex justify-between items-end">
+636: </div>
+637: <div className="relative">
+643: <div className="absolute bottom-4 right-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">
+645: </div>
+646: </div>
+647: </div>
+660: <div className="p-6 bg-gray-900 rounded-[2.5rem] flex items-center justify-between shadow-2xl overflow-hidden relative group">
+661: <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><Terminal size={100} className="text-white" /></div>
+662: <div className="relative z-10">
+665: </div>
+667: </div>
+669: <div className="pt-6 border-t border-gray-50 flex justify-end gap-3">
+677: </div>
+688: <div className="grid grid-cols-2 gap-8">
+689: <div className="space-y-1.5">
+697: </div>
+698: <div className="space-y-1.5">
+706: </div>
+707: </div>
+709: <div className="space-y-1.5">
+716: </div>
+718: <div className="space-y-1.5">
+725: </div>
+727: <div className="space-y-4">
+734: <div key={toggle.key} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+735: <div>
+738: </div>
+744: <div className="w-12 h-6 bg-[#25D366] rounded-full relative p-1 shadow-inner shadow-green-900/10">
+745: <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-md" />
+746: </div>
+748: <div className="w-12 h-6 bg-gray-200 rounded-full relative p-1 shadow-inner">
+749: <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md" />
+750: </div>
+753: </div>
+755: </div>
+757: <div className="pt-6 border-t border-gray-50 flex justify-end gap-3">
+761: </div>
+772: <div className="grid grid-cols-3 gap-6">
+773: <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100">
+774: <div className="flex items-center gap-2 mb-3">
+777: </div>
+778: <div className="text-3xl font-black text-green-700">
+780: </div>
+784: </div>
+786: <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+787: <div className="flex items-center gap-2 mb-3">
+790: </div>
+791: <div className="text-3xl font-black text-blue-700">
+793: </div>
+795: </div>
+797: <div className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border border-purple-100">
+798: <div className="flex items-center gap-2 mb-3">
+801: </div>
+802: <div className="text-3xl font-black text-purple-700">
+804: </div>
+806: </div>
+807: </div>
+810: <div className="space-y-4">
+813: <div className="p-10 text-center bg-gray-50/50 rounded-2xl border border-gray-100">
+817: </div>
+819: <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+823: <div key={msg.id} className="p-4 bg-gray-50/50 rounded-xl border border-gray-100 space-y-2">
+824: <div className="flex items-center justify-between">
+827: </div>
+832: </div>
+835: </div>
+837: </div>
+844: <div>
+847: </div>
+849: <div className="space-y-6">
+850: <div className="space-y-1.5">
+858: </div>
+860: <div className="space-y-1.5">
+868: </div>
+870: <div className="space-y-1.5">
+883: </div>
+884: </div>
+889: <div>
+892: </div>
+894: <div className="space-y-4">
+896: <div key={override.id} className="p-6 bg-gray-50/30 rounded-2xl border border-gray-100 space-y-4 relative group">
+904: <div className="space-y-1.5">
+906: <div className="flex items-center gap-2">
+914: </div>
+915: </div>
+917: <div className="space-y-1.5">
+925: </div>
+927: <div className="space-y-1.5">
+934: </div>
+935: </div>
+944: </div>
+949: <div>
+952: </div>
+954: <div className="p-10 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50 flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-gray-100 transition-all">
+955: <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-4 text-gray-400 group-hover:scale-110 transition-transform">
+957: </div>
+960: </div>
+962: <div className="space-y-3">
+965: <div key={doc.id} className="p-4 bg-white rounded-2xl border border-gray-100 flex items-center justify-between group">
+966: <div className="flex items-center gap-3">
+967: <div className="p-2 bg-blue-50 text-blue-500 rounded-lg">
+969: </div>
+970: <div>
+973: </div>
+974: </div>
+981: </div>
+983: </div>
+985: </div>
+988: <div className="space-y-8 lg:sticky lg:top-8 pt-4">
+991: <div className="flex items-center justify-between">
+994: </div>
+996: <div className="space-y-5">
+997: <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wide">
+1000: </div>
+1001: <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wide">
+1004: </div>
+1005: <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wide">
+1008: </div>
+1009: </div>
+1017: <div className="space-y-6">
+1018: <div className="flex items-center justify-between px-2">
+1019: <div className="flex items-center gap-2.5">
+1022: </div>
+1031: </div>
+1035: <div className="p-8 bg-gray-50/50 flex items-center gap-4 border-b border-gray-100 shrink-0">
+1036: <div className="w-12 h-12 rounded-2xl bg-gray-900 flex items-center justify-center text-[#25D366]"><Brain size={24} /></div>
+1037: <div className="flex-1">
+1040: </div>
+1041: <div className={cn(
+1045: </div>
+1048: <div className="flex-1 overflow-y-auto p-6 space-y-4">
+1050: <div className="h-full flex flex-col items-center justify-center text-center px-6">
+1051: <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
+1053: </div>
+1058: </div>
+1071: <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-3 my-2">
+1072: <div className="p-1.5 bg-blue-500 rounded-lg text-white mt-0.5 shrink-0"><Sparkles size={12} /></div>
+1073: <div className="flex-1 space-y-2">
+1075: <div className="flex flex-wrap gap-1.5">
+1086: </div>
+1088: <div className="flex items-center gap-2 mt-1">
+1089: <div className="h-1 flex-1 bg-blue-100 rounded-full overflow-hidden">
+1090: <div className="h-full bg-blue-500 transition-all" style={{ width: `${(msg.intentAnalysis.confidence * 100)}%` }} />
+1091: </div>
+1093: </div>
+1095: </div>
+1096: </div>
+1101: <div className="flex gap-3">
+1102: <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-black text-[10px] shrink-0">U</div>
+1103: <div className="bg-gray-50 p-4 rounded-2xl rounded-tl-none text-xs font-bold text-gray-600 leading-relaxed shadow-sm flex-1">
+1105: </div>
+1106: </div>
+1111: <div className="flex flex-col gap-3">
+1112: <div className="flex gap-3 justify-end">
+1113: <div className="bg-gray-900 p-4 rounded-2xl rounded-tr-none text-xs font-bold text-white leading-relaxed shadow-xl flex-1 text-right">
+1115: </div>
+1116: <div className="w-8 h-8 rounded-lg bg-[#25D366] flex items-center justify-center text-white font-black text-[10px] shrink-0">AI</div>
+1117: </div>
+1121: <div className="mr-11 bg-white border-2 border-dashed border-gray-200 rounded-[2rem] p-6 space-y-4 shadow-sm">
+1122: <div className="flex items-center justify-between">
+1123: <div className="flex items-center gap-2">
+1124: <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+1126: </div>
+1127: <div>
+1137: </div>
+1138: </div>
+1142: </div>
+1144: <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+1146: <div className="pb-2 border-b border-gray-100">
+1149: </div>
+1151: <div>
+1154: </div>
+1156: <div className="flex flex-wrap gap-2 pt-2">
+1158: <div key={i} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[9px] font-black text-gray-500 uppercase">
+1160: </div>
+1162: </div>
+1164: </div>
+1166: <div className="flex gap-2">
+1183: </div>
+1184: </div>
+1186: </div>
+1200: <div className="p-3 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center gap-2">
+1203: </div>
+1205: <div className="flex gap-3 justify-end">
+1206: <div className="bg-gray-900 p-4 rounded-2xl rounded-tr-none shadow-xl flex-1">
+1207: <div className="flex items-center gap-2">
+1210: </div>
+1211: </div>
+1212: <div className="w-8 h-8 rounded-lg bg-[#25D366] flex items-center justify-center text-white font-black text-[10px] shrink-0 animate-pulse">AI</div>
+1213: </div>
+1217: <div ref={chatEndRef} />
+1218: </div>
+1221: <div className="p-4 border-t border-gray-100 bg-gray-50/30 shrink-0">
+1222: <div className="flex items-center gap-2">
+1244: </div>
+1245: </div>
+1247: </div>
+1248: </div>
+1249: </div>
+1250: </div>
