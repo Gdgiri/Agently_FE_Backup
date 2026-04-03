@@ -33,14 +33,17 @@ import {
     Facebook,
     Send,
     Mail,
-    CreditCard
+    CreditCard,
+    Trash2,
+    Upload
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn, Card, Button, Badge, Input } from '../components/ui';
-import { tenantApi, webhookApi } from '../lib/api/miscApi';
+import { tenantApi, webhookApi, staffApi, mediaApi } from '../lib/api';
 import { botStudioApi } from '../lib/api';
 import { webhookTokenApi } from '../lib/api/webhookTokenApi';
 import { toast } from 'react-hot-toast';
-import { Tenant } from '../types';
+import { Tenant, Staff } from '../types';
 
 const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'waba' | 'instagram' | 'facebook' | 'telegram' | 'email' | 'staff' | 'api' | 'webhooks' | 'orders' | 'gemini' | 'finance'>('waba');
@@ -48,6 +51,7 @@ const Settings: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [settings, setSettings] = useState<Partial<Tenant>>({
         name: '',
         wabaId: '',
@@ -86,7 +90,9 @@ const Settings: React.FC = () => {
         razorpayKeySecret: '',
         stripeEnabled: false,
         stripeSecretKey: '',
-        stripeWebhookSecret: ''
+        stripeWebhookSecret: '',
+        welcomeImageUrl: '',
+        welcomeMessage: '👋 *Welcome to our official Shop!* 🚀\n\nWe\'re delighted to have you here. Browse our categories below to discover our latest premium collections, exclusive deals, and essential items. We\'re here to help you find exactly what you need!\n\n*Choose a category to start exploring:* 👇'
     });
 
     // Webhook Tab State
@@ -109,6 +115,13 @@ const Settings: React.FC = () => {
     const [generatingApiKey, setGeneratingApiKey] = useState(false);
     const [newKeyLabel, setNewKeyLabel] = useState("");
 
+    // Staff Management State
+    const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [fetchingStaff, setFetchingStaff] = useState(false);
+    const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+    const [savingStaff, setSavingStaff] = useState(false);
+    const [newStaff, setNewStaff] = useState({ name: '', phoneNumber: '', role: '' });
+
     const getWebhookBaseUrl = () => {
         if (window.location.origin.includes('localhost')) {
             return import.meta.env.VITE_API_URL?.replace('/api/v1', '') || window.location.origin;
@@ -130,8 +143,53 @@ const Settings: React.FC = () => {
                 setLoading(false);
             }
         };
+
+        const fetchStaff = async () => {
+            setFetchingStaff(true);
+            try {
+                const { data } = await staffApi.getAll();
+                if (data.success) setStaffList(data.data);
+            } catch (error) {
+                console.error('Failed to load staff');
+            } finally {
+                setFetchingStaff(false);
+            }
+        };
+
         fetchSettings();
-    }, []);
+        if (activeTab === 'staff') fetchStaff();
+    }, [activeTab]);
+
+    const handleCreateStaff = async () => {
+        if (!newStaff.name.trim()) return;
+        setSavingStaff(true);
+        const toastId = toast.loading('Onboarding agent...');
+        try {
+            const { data } = await staffApi.create(newStaff);
+            if (data.success) {
+                setStaffList(prev => [...prev, data.data]);
+                setIsStaffModalOpen(false);
+                setNewStaff({ name: '', phoneNumber: '', role: '' });
+                toast.success('Agent onboarded successfully', { id: toastId });
+            }
+        } catch (error) {
+            toast.error('Failed to add staff', { id: toastId });
+        } finally {
+            setSavingStaff(false);
+        }
+    };
+
+    const handleDeleteStaff = async (id: string, name: string) => {
+        if (!confirm(`Are you sure you want to remove ${name}?`)) return;
+        const toastId = toast.loading('Removing agent...');
+        try {
+            await staffApi.delete(id);
+            setStaffList(prev => prev.filter(s => s.id !== id));
+            toast.success('Agent removed', { id: toastId });
+        } catch (error) {
+            toast.error('Failed to remove agent', { id: toastId });
+        }
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -175,7 +233,9 @@ const Settings: React.FC = () => {
                 razorpayKeySecret: settings.razorpayKeySecret || null,
                 stripeEnabled: settings.stripeEnabled,
                 stripeSecretKey: settings.stripeSecretKey || null,
-                stripeWebhookSecret: settings.stripeWebhookSecret || null
+                stripeWebhookSecret: settings.stripeWebhookSecret || null,
+                welcomeImageUrl: settings.welcomeImageUrl || null,
+                welcomeMessage: settings.welcomeMessage || null
             };
 
             const { data } = await tenantApi.updateSettings(payload);
@@ -261,6 +321,27 @@ const Settings: React.FC = () => {
         if (activeTab === 'orders') fetchWebhookToken();
         if (activeTab === 'api') fetchApiKeys();
     }, [activeTab]);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingImage(true);
+        const toastId = toast.loading('Uploading banner to Cloudinary...');
+        try {
+            const { data } = await mediaApi.upload(file);
+            console.log('Upload response:', data);
+            if (data.success) {
+                setSettings({ ...settings, welcomeImageUrl: data.data.url });
+                toast.success('Image uploaded successfully', { id: toastId });
+                setIsEditing(true); // Ensure save is possible
+            }
+        } catch (error) {
+            toast.error('Failed to upload image', { id: toastId });
+        } finally {
+            setUploadingImage(false);
+        }
+    };
 
     const fetchApiKeys = async () => {
         setFetchingApiKeys(true);
@@ -462,6 +543,77 @@ const Settings: React.FC = () => {
                                         </div>
 
                                         <Input label="Webhook Verify Token" value={settings.verifyToken || ''} onChange={(e) => setSettings({ ...settings, verifyToken: e.target.value })} disabled={!isEditing} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 pt-4 border-t border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-green-50 text-green-600 rounded-xl"><Layout size={18} /></div>
+                                        <div>
+                                            <h5 className="text-xs font-black text-gray-900 uppercase tracking-wider">Custom Shop Greeting</h5>
+                                            <p className="text-[10px] font-bold text-gray-500">Professional header image and personalized welcome text for your WhatsApp Shop</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="space-y-4">
+                                            <div className="flex items-end gap-4">
+                                                <div className="flex-1">
+                                                    <Input 
+                                                        label="Welcome Header Image URL" 
+                                                        placeholder="https://example.com/banner.jpg" 
+                                                        value={settings.welcomeImageUrl || ''} 
+                                                        onChange={(e) => setSettings({ ...settings, welcomeImageUrl: e.target.value })} 
+                                                        disabled={!isEditing} 
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                                <div className="shrink-0 pb-1">
+                                                    <input
+                                                        type="file"
+                                                        id="welcome-image-upload"
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                        onChange={handleImageUpload}
+                                                        disabled={!isEditing || uploadingImage}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        disabled={!isEditing || uploadingImage}
+                                                        onClick={() => document.getElementById('welcome-image-upload')?.click()}
+                                                        className="h-[42px] border-gray-100 bg-gray-50/50 hover:bg-[#25D366]/5 hover:border-[#25D366] text-gray-500 hover:text-[#25D366] transition-all px-4 flex items-center gap-2"
+                                                    >
+                                                        {uploadingImage ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Upload Banner</span>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            
+                                            {settings.welcomeImageUrl && (
+                                                <div className="relative aspect-[21/9] w-full rounded-2xl overflow-hidden border border-gray-100 shadow-xl bg-gray-50 group">
+                                                    <img src={settings.welcomeImageUrl} alt="Header Preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <span className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-900 shadow-xl">Live Preview</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block pl-1">Personalized Welcome Message</label>
+                                            <textarea
+                                                className={cn(
+                                                    "w-full p-4 bg-gray-50/50 border border-gray-100 rounded-2xl text-xs font-bold text-gray-900 outline-none focus:ring-4 focus:ring-[#25D366]/5 focus:border-[#25D366] transition-all min-h-[120px] leading-relaxed",
+                                                    !isEditing && "opacity-60 cursor-not-allowed bg-gray-100"
+                                                )}
+                                                placeholder="Enter your professional greeting here..."
+                                                value={settings.welcomeMessage || ''}
+                                                onChange={(e) => setSettings({ ...settings, welcomeMessage: e.target.value })}
+                                                disabled={!isEditing}
+                                            />
+                                            <p className="text-[9px] font-bold text-gray-400 pl-1 uppercase tracking-tighter">Tip: Use *text* for bold and _text_ for italics in WhatsApp messages.</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -786,25 +938,51 @@ const Settings: React.FC = () => {
                     {activeTab === 'staff' && (
                         <Card className="p-8 space-y-8">
                             <div className="flex items-center justify-between">
-                                <h4 className="text-lg font-black text-gray-900">Manage Staff</h4>
-                                <Button><Plus size={16} /> Invite Agent</Button>
+                                <div className="space-y-1">
+                                    <h4 className="text-lg font-black text-gray-900 border-l-4 border-[#25D366] pl-4">Manage Staff</h4>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-4">Team members and specialist assigned to appointments</p>
+                                </div>
+                                <Button
+                                    onClick={() => setIsStaffModalOpen(true)}
+                                    className="bg-[#25D366] text-white hover:bg-[#1da851] rounded-2xl h-12 px-6"
+                                >
+                                    <Plus size={16} /> Invite Agent
+                                </Button>
                             </div>
+
                             <div className="space-y-4">
-                                {[
-                                    { name: 'Alex Rivera', role: 'Administrator', email: 'alex@agently.com', status: 'Online' },
-                                    { name: 'Emma Stone', role: 'Support Agent', email: 'emma@agently.com', status: 'Offline' },
-                                ].map(staff => (
-                                    <div key={staff.email} className="p-4 border border-gray-100 rounded-[2rem] flex items-center justify-between hover:bg-gray-50 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 font-black uppercase">{staff.name.charAt(0)}</div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-900">{staff.name}</p>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{staff.email} • {staff.role}</p>
+                                {fetchingStaff ? (
+                                    <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-gray-300" size={40} /></div>
+                                ) : staffList.length === 0 ? (
+                                    <div className="p-12 text-center bg-gray-50 rounded-[2.5rem] border border-gray-100 border-dashed text-gray-400 font-bold">
+                                        No staff members found. Add an agent to start assigning appointments.
+                                    </div>
+                                ) : (
+                                    staffList.map(member => (
+                                        <div key={member.id} className="p-5 border border-gray-100 rounded-[2rem] flex items-center justify-between hover:bg-gray-50 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-900 font-black uppercase text-lg shadow-sm">{member.name.charAt(0)}</div>
+                                                <div>
+                                                    <p className="text-sm font-black text-gray-900">{member.name}</p>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                        {member.phoneNumber || 'No phone'} • {member.role || 'Agent'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <Badge variant={member.isActive ? 'success' : 'neutral'}>
+                                                    {member.isActive ? 'Active' : 'Inactive'}
+                                                </Badge>
+                                                <button
+                                                    onClick={() => handleDeleteStaff(member.id, member.name)}
+                                                    className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </div>
-                                        <Badge variant={staff.status === 'Online' ? 'success' : 'neutral'}>{staff.status}</Badge>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </Card>
                     )}
@@ -1388,19 +1566,78 @@ const Settings: React.FC = () => {
                     </Card>
                 </div>
             </div >
+            {/* Manage Staff Modal */}
+            <AnimatePresence>
+                {isStaffModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-md"
+                        >
+                            <Card className="p-8 space-y-6 shadow-2xl rounded-[3rem] border-none bg-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-gray-900">Onboard New Agent</h3>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Register a new team member</p>
+                                    </div>
+                                    <button onClick={() => setIsStaffModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+                                        <X size={20} className="text-gray-400" />
+                                    </button>
+                                </div>
 
-            {isAddModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                    <Card className="w-full max-w-md p-6 space-y-4">
-                        <h3 className="text-lg font-bold">Add Webhook</h3>
-                        <Input label="Target URL" placeholder="https://your-api.com/hook" value={newEndpoint.url} onChange={(e: any) => setNewEndpoint({ ...newEndpoint, url: e.target.value })} />
-                        <div className="flex gap-2">
-                            <Button className="flex-1" variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                            <Button className="flex-1" onClick={handleRegisterWebhook} disabled={registering}>{registering ? <Loader2 className="animate-spin" size={16} /> : 'Create'}</Button>
-                        </div>
-                    </Card>
-                </div>
-            )}
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Agent Name</label>
+                                        <Input
+                                            placeholder="Full Name"
+                                            value={newStaff.name}
+                                            onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                                            className="h-14 rounded-2xl bg-gray-50 border-gray-100 focus:ring-[#25D366]/10"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">WhatsApp Number</label>
+                                        <Input
+                                            placeholder="+91 98765 43210"
+                                            value={newStaff.phoneNumber}
+                                            onChange={(e) => setNewStaff({ ...newStaff, phoneNumber: e.target.value })}
+                                            className="h-14 rounded-2xl bg-gray-50 border-gray-100 focus:ring-[#25D366]/10"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Role / Specialty</label>
+                                        <Input
+                                            placeholder="e.g. Sales Expert, Support"
+                                            value={newStaff.role}
+                                            onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
+                                            className="h-14 rounded-2xl bg-gray-50 border-gray-100 focus:ring-[#25D366]/10"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase tracking-widest"
+                                        onClick={() => setIsStaffModalOpen(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="flex-1 h-12 rounded-2xl bg-[#25D366] hover:bg-[#1da851] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-100"
+                                        onClick={handleCreateStaff}
+                                        disabled={savingStaff}
+                                    >
+                                        {savingStaff ? <Loader2 className="animate-spin" size={16} /> : 'Onboard Agent'}
+                                    </Button>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div >
     );
 };

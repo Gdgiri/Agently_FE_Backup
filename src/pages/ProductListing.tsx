@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-    Plus, Search, Filter, LayoutGrid, List, Edit2, 
-    MapPin, User, ChevronRight, X, Upload, Trash2, 
+import {
+    Plus, Search, Filter, LayoutGrid, List, Edit2,
+    MapPin, User, ChevronRight, X, Upload, Trash2,
     Home, Car, Building2, Smartphone, Loader2,
     Calendar, Maximize2, Camera, Database, Settings2, Check
 } from 'lucide-react';
@@ -30,7 +30,10 @@ const ProductListing: React.FC = () => {
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [allCategories, setAllCategories] = useState<Category[]>([]);
-    const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>('all');
+    const [selectedFilterType, setSelectedFilterType] = useState<string>('all');
+    const [selectedFilterSubCategory, setSelectedFilterSubCategory] = useState<string>('all');
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+    const [hoveredType, setHoveredType] = useState<string | null>(null);
     const [isManagingCategories, setIsManagingCategories] = useState(false);
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
     const [editingCategoryName, setEditingCategoryName] = useState('');
@@ -91,7 +94,7 @@ const ProductListing: React.FC = () => {
         try {
             const { data } = await categoryApi.getAll();
             setAllCategories(data);
-            
+
             // Also fetch unique types
             const { data: types } = await categoryApi.getTypes();
             setProductTypes(types);
@@ -150,23 +153,23 @@ const ProductListing: React.FC = () => {
 
     const handleCreateType = async () => {
         if (!newTypeName.trim()) return;
-        const toastId = toast.loading('Creating type...');
-        try {
-            // To create a type, we create a "General" category for it
-            const { data } = await categoryApi.create({ 
-                name: 'General', 
-                type: newTypeName 
-            });
-            toast.success('Type created', { id: toastId });
-            setProductTypes(prev => [...prev, newTypeName]);
-            setCategories(prev => [...prev, data]);
-            setAllCategories(prev => [...prev, data]);
-            setIsCreatingType(false);
-            setNewTypeName('');
-            setFormData(prev => ({ ...prev, category: newTypeName, categoryId: data.id }));
-        } catch (error) {
-            toast.error('Failed to create type', { id: toastId });
+
+        // No need to create a "General" category anymore. 
+        // We just add the type to our local state.
+        const typeExists = productTypes.includes(newTypeName);
+        if (!typeExists) {
+            setProductTypes(prev => [...prev, newTypeName].sort());
         }
+
+        setFormData(prev => ({
+            ...prev,
+            category: newTypeName,
+            categoryId: '' // Clear category since none exists for this type yet
+        }));
+
+        setIsCreatingType(false);
+        setNewTypeName('');
+        toast.success(`Type "${newTypeName}" added to the list.`);
     };
 
     const handleUpdateType = async (oldName: string) => {
@@ -299,8 +302,8 @@ const ProductListing: React.FC = () => {
     const handleSubmit = async () => {
         const toastId = toast.loading(editingProduct ? 'Updating listing...' : 'Creating listing...');
         try {
-            const priceValue = typeof formData.price === 'string' 
-                ? parseFloat(formData.price.replace(/[^0-9.]/g, '')) 
+            const priceValue = typeof formData.price === 'string'
+                ? parseFloat(formData.price.replace(/[^0-9.]/g, ''))
                 : formData.price;
 
             if (formData.imageUrl?.startsWith('data:')) {
@@ -315,7 +318,7 @@ const ProductListing: React.FC = () => {
                 const uploadToastId = toast.loading(`Uploading ${pendingFiles.length} documents...`);
                 try {
                     const uploadedResults = await Promise.all(pendingFiles.map(file => botStudioApi.uploadKnowledgeFile(file)));
-                    
+
                     const newDocs = uploadedResults.map((res, index) => {
                         const data = res.data?.data || res.data;
                         const source = data.source || data;
@@ -447,7 +450,7 @@ const ProductListing: React.FC = () => {
             // Some backends return the doc info in data.source, some in data.data, some in data directly
             const responseData = data.data || data;
             const sourceInfo = responseData.source || responseData;
-            
+
             if (data.success || responseData.id || sourceInfo.id) {
                 const newDoc = {
                     id: sourceInfo.id || responseData.id || `doc-${Date.now()}`,
@@ -492,26 +495,25 @@ const ProductListing: React.FC = () => {
     };
 
     const filteredProducts = products.filter(p => {
-        // EXCLUDE general catalog items (those with metaId synced from WhatsApp)
-        if (p.metaId) return false;
+        // Search filter
+        const searchMatches = p.title.toLowerCase().includes(search.toLowerCase()) ||
+            (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.categoryRef?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.location || '').toLowerCase().includes(search.toLowerCase());
 
-        const listingCategories = ['apartment', 'house', 'car', 'commercial', 'bike', 'retailer', 'electronics', 'reseller'];
-        const isListing = listingCategories.some(cat => p.category?.toLowerCase().includes(cat));
-        
-        // Also exclude anything explicitly "Uncategorized" as catalog default
-        if (p.category?.toLowerCase() === 'uncategorized') return false;
+        if (!searchMatches) return false;
 
-        if (!isListing) return false;
-        
-        // --- NEW CATEGORY FILTER ---
-        if (selectedFilterCategory !== 'all' && p.categoryId !== selectedFilterCategory) {
+        // --- TYPE FILTER ---
+        if (selectedFilterType !== 'all' && p.category !== selectedFilterType) {
             return false;
         }
 
-        return p.title.toLowerCase().includes(search.toLowerCase()) ||
-               p.category?.toLowerCase().includes(search.toLowerCase()) ||
-               p.categoryRef?.name?.toLowerCase().includes(search.toLowerCase()) ||
-               p.location?.toLowerCase().includes(search.toLowerCase());
+        // --- SUB-CATEGORY FILTER ---
+        if (selectedFilterSubCategory !== 'all' && p.categoryId !== selectedFilterSubCategory) {
+            return false;
+        }
+
+        return true;
     });
 
     return (
@@ -526,7 +528,7 @@ const ProductListing: React.FC = () => {
                 }
             />
 
-            <Card className="p-4 flex items-center gap-4 bg-white border-none shadow-sm">
+            <Card className="p-4 flex items-center gap-4 bg-white border-none shadow-sm overflow-visible">
                 <div className="flex-1 relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#25D366] transition-colors" size={20} />
                     <input
@@ -537,29 +539,144 @@ const ProductListing: React.FC = () => {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-                
-                <div className="flex bg-gray-100 p-1 rounded-2xl">
-                    <select 
-                        value={selectedFilterCategory}
-                        onChange={(e) => setSelectedFilterCategory(e.target.value)}
-                        className="bg-transparent border-none text-xs font-bold px-3 py-2 outline-none cursor-pointer focus:ring-0"
+
+                <div className="relative">
+                    <Button
+                        variant="outline"
+                        className={cn(
+                            "px-4 py-2.5 rounded-2xl flex items-center gap-2 border-gray-100 bg-gray-50/50 hover:bg-white hover:border-[#25D366] transition-all group",
+                            (selectedFilterType !== 'all' || selectedFilterSubCategory !== 'all') && "border-[#25D366] bg-[#25D366]/5"
+                        )}
+                        onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
                     >
-                        <option value="all">All Categories</option>
-                        {allCategories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.type ? `${cat.type} • ` : ''}{cat.name}</option>
-                        ))}
-                    </select>
+                        <Filter size={16} className={cn(
+                            "text-gray-400 group-hover:text-[#25D366]",
+                            (selectedFilterType !== 'all' || selectedFilterSubCategory !== 'all') && "text-[#25D366]"
+                        )} />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">
+                            {selectedFilterSubCategory !== 'all'
+                                ? allCategories.find(c => c.id === selectedFilterSubCategory)?.name
+                                : selectedFilterType !== 'all'
+                                    ? selectedFilterType
+                                    : 'Filter Categories'}
+                        </span>
+                    </Button>
+
+                    <AnimatePresence>
+                        {isFilterMenuOpen && (
+                            <>
+                                {/* Overlay to close on click outside */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-40 bg-transparent"
+                                    onClick={() => {
+                                        setIsFilterMenuOpen(false);
+                                        setHoveredType(null);
+                                    }}
+                                />
+
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 mt-3 z-50 flex gap-1"
+                                >
+                                    {/* Main Menu (Types) */}
+                                    <div className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden py-2 p-1.5">
+                                        <button
+                                            className={cn(
+                                                "w-full text-left px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                selectedFilterType === 'all' ? "bg-[#25D366] text-white shadow-lg shadow-green-100" : "text-gray-500 hover:bg-gray-50"
+                                            )}
+                                            onClick={() => {
+                                                setSelectedFilterType('all');
+                                                setSelectedFilterSubCategory('all');
+                                                setIsFilterMenuOpen(false);
+                                            }}
+                                            onMouseEnter={() => setHoveredType(null)}
+                                        >
+                                            All Types
+                                        </button>
+                                        <div className="h-px bg-gray-50 my-1.5 mx-2" />
+                                        {productTypes.map(type => (
+                                            <div
+                                                key={type}
+                                                className="relative"
+                                                onMouseEnter={() => setHoveredType(type)}
+                                            >
+                                                <button
+                                                    className={cn(
+                                                        "w-full text-left px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-between group",
+                                                        selectedFilterType === type ? "bg-[#25D366] text-white" : "text-gray-500 hover:bg-gray-50"
+                                                    )}
+                                                    onClick={() => {
+                                                        setSelectedFilterType(type);
+                                                        setSelectedFilterSubCategory('all');
+                                                        setIsFilterMenuOpen(false);
+                                                    }}
+                                                >
+                                                    {type}
+                                                    <ChevronRight size={12} className={cn(
+                                                        "transition-transform",
+                                                        hoveredType === type && "translate-x-1"
+                                                    )} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Submenu (Categories) */}
+                                    {hoveredType && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden py-2 p-1.5"
+                                        >
+                                            <div className="px-4 py-2 border-b border-gray-50 mb-1.5">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Subcategories</span>
+                                            </div>
+                                            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                                {allCategories
+                                                    .filter(cat => cat.type === hoveredType)
+                                                    .map(cat => (
+                                                        <button
+                                                            key={cat.id}
+                                                            className={cn(
+                                                                "w-full text-left px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                                selectedFilterSubCategory === cat.id ? "bg-[#25D366] text-white shadow-lg shadow-green-100" : "text-gray-500 hover:bg-gray-50"
+                                                            )}
+                                                            onClick={() => {
+                                                                setSelectedFilterSubCategory(cat.id);
+                                                                setSelectedFilterType(hoveredType);
+                                                                setIsFilterMenuOpen(false);
+                                                            }}
+                                                        >
+                                                            {cat.name}
+                                                        </button>
+                                                    ))
+                                                }
+                                                {allCategories.filter(cat => cat.type === hoveredType).length === 0 && (
+                                                    <p className="px-4 py-4 text-[10px] text-gray-400 font-bold uppercase italic">No Categories</p>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                <Button variant="outline" className="p-3 rounded-2xl"><Filter size={20} /></Button>
                 <div className="flex bg-gray-100 p-1 rounded-2xl">
-                    <button 
+                    <button
                         onClick={() => setViewMode('grid')}
                         className={cn("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600")}
                     >
                         <LayoutGrid size={20} />
                     </button>
-                    <button 
+                    <button
                         onClick={() => setViewMode('list')}
                         className={cn("p-2 rounded-xl transition-all", viewMode === 'list' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600")}
                     >
@@ -576,7 +693,7 @@ const ProductListing: React.FC = () => {
                 </div>
             ) : (
                 <div className={cn(
-                    "grid gap-8",
+                    "grid gap-6",
                     viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5" : "grid-cols-1"
                 )}>
                     {filteredProducts.map(p => (
@@ -587,8 +704,15 @@ const ProductListing: React.FC = () => {
                             layout
                             className="group"
                         >
-                            <Card className="h-full bg-white border-none shadow-xl shadow-gray-200/50 rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-gray-300/50 transition-all duration-500 flex flex-col">
-                                <div className="aspect-[4/3] relative overflow-hidden">
+                            <Card className={cn(
+                                "bg-white border-none shadow-xl shadow-gray-200/50 rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-gray-300/50 transition-all duration-500 flex",
+                                viewMode === 'grid' ? "flex-col h-full" : "flex-col md:flex-row h-auto md:h-64"
+                            )}>
+                                {/* Image Container */}
+                                <div className={cn(
+                                    "relative overflow-hidden shrink-0",
+                                    viewMode === 'grid' ? "aspect-[4/3] w-full" : "w-full md:w-80 h-48 md:h-full"
+                                )}>
                                     <img
                                         src={p.imageUrl || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop"}
                                         alt={p.title}
@@ -596,20 +720,20 @@ const ProductListing: React.FC = () => {
                                     />
                                     <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
                                         <div className="flex gap-2">
-                                            <button 
+                                            <button
                                                 onClick={() => handleOpenModal(p)}
                                                 className="p-2.5 bg-white/90 backdrop-blur-md rounded-xl text-gray-900 shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300"
                                             >
                                                 <Edit2 size={14} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleDelete(p.id, p.title)}
                                                 className="p-2.5 bg-red-500/90 backdrop-blur-md rounded-xl text-white shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
-                                        <Badge 
+                                        <Badge
                                             variant={p.status?.toLowerCase() === 'active' ? 'success' : 'warning'}
                                             className="bg-white/90 backdrop-blur-md border-none px-3 py-1 text-[10px]"
                                         >
@@ -617,41 +741,76 @@ const ProductListing: React.FC = () => {
                                         </Badge>
                                     </div>
                                 </div>
-                                <div className="p-5 space-y-3 flex-1">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#FF4D4D]">
-                                            {p.categoryRef ? `${p.category} • ${p.categoryRef.name}` : p.category}
-                                        </div>
-                                        {p.metadata && (
-                                            <div className="flex items-center gap-2.5 text-[9px] font-bold text-gray-400">
-                                                {(p.metadata.bedrooms || p.metadata.metadata?.bedrooms) && (
-                                                    <span className="flex items-center gap-1"><Home size={10} /> {p.metadata.bedrooms || p.metadata.metadata.bedrooms}</span>
-                                                )}
-                                                {(p.metadata.bathrooms || p.metadata.metadata?.bathrooms) && (
-                                                    <span className="flex items-center gap-1"><Home size={10} /> {p.metadata.bathrooms || p.metadata.metadata.bathrooms}</span>
-                                                )}
-                                                {(p.metadata.sqft || p.metadata.metadata?.sqft) && (
-                                                    <span className="flex items-center gap-1"><Maximize2 size={10} /> {p.metadata.sqft || p.metadata.metadata.sqft}ft²</span>
-                                                )}
-                                                {p.metadata.yearBuilt && (
-                                                    <span className="flex items-center gap-1"><Calendar size={10} /> {p.metadata.yearBuilt}</span>
-                                                )}
+
+                                {/* Content Details */}
+                                <div className={cn(
+                                    "p-6 flex flex-col justify-between flex-1",
+                                    viewMode === 'list' && "md:p-8"
+                                )}>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#FF4D4D]">
+                                                {p.categoryRef ? `${p.category} • ${p.categoryRef.name}` : p.category}
                                             </div>
+                                            {p.metadata && (
+                                                <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
+                                                    {(p.metadata.bedrooms || p.metadata.metadata?.bedrooms) && (
+                                                        <span className="flex items-center gap-1.5"><Home size={12} className="text-gray-300" /> {p.metadata.bedrooms || p.metadata.metadata.bedrooms}</span>
+                                                    )}
+                                                    {(p.metadata.bathrooms || p.metadata.metadata?.bathrooms) && (
+                                                        <span className="flex items-center gap-1.5"><Home size={12} className="text-gray-300" /> {p.metadata.bathrooms || p.metadata.metadata.bathrooms}</span>
+                                                    )}
+                                                    {(p.metadata.sqft || p.metadata.metadata?.sqft) && (
+                                                        <span className="flex items-center gap-1.5"><Maximize2 size={12} className="text-gray-300" /> {p.metadata.sqft || p.metadata.metadata.sqft}ft²</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <h4 className={cn(
+                                                "font-black text-gray-900 group-hover:text-[#25D366] transition-colors line-clamp-1",
+                                                viewMode === 'grid' ? "text-base" : "text-2xl"
+                                            )}>{p.title}</h4>
+                                            <p className={cn(
+                                                "font-black text-gray-900 mt-1",
+                                                viewMode === 'grid' ? "text-lg" : "text-2xl"
+                                            )}>
+                                                {typeof p.price === 'number' ? `$ ${p.price.toLocaleString()}` : p.price}
+                                            </p>
+                                        </div>
+
+                                        {viewMode === 'list' && p.description && (
+                                            <p className="text-sm text-gray-500 font-medium line-clamp-2 mt-2 leading-relaxed max-w-2xl">
+                                                {p.description}
+                                            </p>
                                         )}
                                     </div>
-                                    <h4 className="text-base font-black text-gray-900 group-hover:text-[#25D366] transition-colors line-clamp-1">{p.title}</h4>
-                                    <p className="text-lg font-black text-gray-900">
-                                        {typeof p.price === 'number' ? `$ ${p.price.toLocaleString()}` : p.price}
-                                    </p>
-                                    <div className="pt-3 mt-3 border-t border-gray-50 flex items-center justify-between text-[10px] font-bold text-gray-400">
-                                        <div className="flex items-center gap-2">
-                                            <MapPin size={14} className="text-[#25D366]" />
-                                            <span className="truncate max-w-[120px]">{p.location || p.metadata?.location || 'Location...'}</span>
+
+                                    <div className={cn(
+                                        "flex border-t border-gray-50 pt-4 items-center justify-between text-[11px] font-bold text-gray-400",
+                                        viewMode === 'list' && "mt-auto"
+                                    )}>
+                                        <div className="flex gap-6">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                                                    <MapPin size={16} className="text-[#25D366]" />
+                                                </div>
+                                                <span className="truncate max-w-[150px]">{p.location || p.metadata?.location || 'Location...'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                                                    <User size={16} className="text-[#25D366]" />
+                                                </div>
+                                                <span>{p.agent || p.metadata?.agent || p.metadata?.agent_name || 'Agent...'}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <User size={14} className="text-[#25D366]" />
-                                            <span>{p.agent || p.metadata?.agent || p.metadata?.agent_name || 'Agent...'}</span>
-                                        </div>
+
+                                        {viewMode === 'list' && (
+                                            <Button variant="outline" onClick={() => handleOpenModal(p)} className="rounded-xl px-6">
+                                                View Details
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </Card>
@@ -693,7 +852,7 @@ const ProductListing: React.FC = () => {
                                         <div className="w-1.5 h-6 bg-[#25D366] rounded-full" />
                                         <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Basic Info & Image</h5>
                                     </div>
-                                    
+
                                     <div className="flex gap-8 items-start">
                                         <div className="w-32 h-32 rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden relative group shrink-0 shadow-sm hover:shadow-md transition-all">
                                             {formData.imageUrl ? (
@@ -707,9 +866,9 @@ const ProductListing: React.FC = () => {
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                                                 <label className="cursor-pointer p-2 bg-white rounded-xl shadow-lg hover:scale-110 transition-all text-gray-900">
                                                     <Upload size={16} />
-                                                    <input 
-                                                        type="file" 
-                                                        className="hidden" 
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
                                                         accept="image/*"
                                                         onChange={async (e) => {
                                                             const file = e.target.files?.[0];
@@ -724,7 +883,7 @@ const ProductListing: React.FC = () => {
                                                             } catch (err) {
                                                                 toast.error('Cloudinary upload failed', { id: toastId });
                                                             }
-                                                        }} 
+                                                        }}
                                                     />
                                                 </label>
                                             </div>
@@ -757,7 +916,7 @@ const ProductListing: React.FC = () => {
                                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Type</label>
                                                 <div className="flex items-center gap-2">
                                                     {!isManagingTypes && !isCreatingType && (
-                                                        <button 
+                                                        <button
                                                             type="button"
                                                             onClick={() => setIsManagingTypes(true)}
                                                             className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 hover:text-gray-900"
@@ -768,7 +927,7 @@ const ProductListing: React.FC = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             {isCreatingType ? (
                                                 <div className="flex gap-2">
                                                     <input
@@ -798,7 +957,7 @@ const ProductListing: React.FC = () => {
                                                             <div key={type} className="flex items-center justify-between gap-3 p-2 bg-white rounded-xl border border-gray-50 group">
                                                                 {editingTypeOldName === type ? (
                                                                     <div className="flex-1 flex gap-2">
-                                                                        <input 
+                                                                        <input
                                                                             type="text"
                                                                             value={editingTypeNewName}
                                                                             onChange={(e) => setEditingTypeNewName(e.target.value)}
@@ -813,19 +972,19 @@ const ProductListing: React.FC = () => {
                                                                     <>
                                                                         <span className="text-[11px] font-black text-gray-700">{type}</span>
                                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                                            <button 
+                                                                            <button
                                                                                 type="button"
                                                                                 onClick={() => {
                                                                                     setEditingTypeOldName(type);
                                                                                     setEditingTypeNewName(type);
-                                                                                }} 
+                                                                                }}
                                                                                 className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900"
                                                                             >
                                                                                 <Edit2 size={12} />
                                                                             </button>
-                                                                            <button 
+                                                                            <button
                                                                                 type="button"
-                                                                                onClick={() => handleDeleteType(type)} 
+                                                                                onClick={() => handleDeleteType(type)}
                                                                                 className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
                                                                             >
                                                                                 <Trash2 size={12} />
@@ -858,14 +1017,14 @@ const ProductListing: React.FC = () => {
                                                 <div className="flex items-center gap-2">
                                                     {!isCreatingCategory && !isManagingCategories && (
                                                         <>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => setIsManagingCategories(true)}
                                                                 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 hover:text-gray-900"
                                                                 title="Manage Categories"
                                                             >
                                                                 <Settings2 size={12} /> Manage
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => setIsCreatingCategory(true)}
                                                                 className="text-[10px] font-black text-[#25D366] uppercase tracking-widest flex items-center gap-1 hover:opacity-70"
                                                             >
@@ -875,7 +1034,7 @@ const ProductListing: React.FC = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             {isCreatingCategory ? (
                                                 <div className="flex gap-2">
                                                     <input
@@ -886,15 +1045,15 @@ const ProductListing: React.FC = () => {
                                                         onChange={(e) => setNewCategoryName(e.target.value)}
                                                         autoFocus
                                                     />
-                                                    <Button 
-                                                        size="sm" 
+                                                    <Button
+                                                        size="sm"
                                                         onClick={async () => {
                                                             if (!newCategoryName.trim()) return;
                                                             const toastId = toast.loading('Creating category...');
                                                             try {
-                                                                const { data } = await categoryApi.create({ 
-                                                                    name: newCategoryName, 
-                                                                    type: formData.category 
+                                                                const { data } = await categoryApi.create({
+                                                                    name: newCategoryName,
+                                                                    type: formData.category
                                                                 });
                                                                 toast.success('Category created', { id: toastId });
                                                                 setCategories(prev => [...prev, data]);
@@ -909,9 +1068,9 @@ const ProductListing: React.FC = () => {
                                                     >
                                                         Save
                                                     </Button>
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
                                                         onClick={() => {
                                                             setIsCreatingCategory(false);
                                                             setNewCategoryName('');
@@ -932,7 +1091,7 @@ const ProductListing: React.FC = () => {
                                                             <div key={cat.id} className="flex items-center justify-between gap-3 p-2 bg-white rounded-xl border border-gray-50 group">
                                                                 {editingCategoryId === cat.id ? (
                                                                     <div className="flex-1 flex gap-2">
-                                                                        <input 
+                                                                        <input
                                                                             type="text"
                                                                             value={editingCategoryName}
                                                                             onChange={(e) => setEditingCategoryName(e.target.value)}
@@ -947,17 +1106,17 @@ const ProductListing: React.FC = () => {
                                                                     <>
                                                                         <span className="text-[11px] font-black text-gray-700">{cat.name}</span>
                                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                                            <button 
+                                                                            <button
                                                                                 onClick={() => {
                                                                                     setEditingCategoryId(cat.id);
                                                                                     setEditingCategoryName(cat.name);
-                                                                                }} 
+                                                                                }}
                                                                                 className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900"
                                                                             >
                                                                                 <Edit2 size={12} />
                                                                             </button>
-                                                                            <button 
-                                                                                onClick={() => handleDeleteCategory(cat.id, cat.name)} 
+                                                                            <button
+                                                                                onClick={() => handleDeleteCategory(cat.id, cat.name)}
                                                                                 className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"
                                                                             >
                                                                                 <Trash2 size={12} />
@@ -1034,7 +1193,7 @@ const ProductListing: React.FC = () => {
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         />
                                     </div>
-                                    
+
                                     {/* Template: Vehicle (Car, Bike) */}
                                     {formData.category?.toLowerCase().includes('car') || formData.category?.toLowerCase().includes('bike') ? (
                                         <div className="grid grid-cols-2 gap-6">
@@ -1122,7 +1281,7 @@ const ProductListing: React.FC = () => {
                                         </div>
                                         <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Product-Specific RAG</span>
                                     </div>
-                                    
+
                                     <p className="text-[11px] font-medium text-gray-400 leading-relaxed">
                                         Upload documents (PDF, DOCX, TXT) to train the AI assistant on this specific listing. The AI will use these documents to answer customer queries.
                                     </p>
@@ -1164,8 +1323,8 @@ const ProductListing: React.FC = () => {
                                                                 }}
                                                                 className={cn(
                                                                     "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border",
-                                                                    isLinked 
-                                                                        ? "bg-[#25D366] text-white border-[#25D366] shadow-lg shadow-green-100" 
+                                                                    isLinked
+                                                                        ? "bg-[#25D366] text-white border-[#25D366] shadow-lg shadow-green-100"
                                                                         : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
                                                                 )}
                                                             >
@@ -1210,7 +1369,7 @@ const ProductListing: React.FC = () => {
                                                         <p className="text-[10px] font-bold text-gray-400 uppercase">{doc.size}</p>
                                                     </div>
                                                 </div>
-                                                <button 
+                                                <button
                                                     onClick={() => removeDoc(doc.id)}
                                                     className="p-2 text-gray-100 group-hover:text-red-400 hover:text-red-600 transition-all"
                                                 >

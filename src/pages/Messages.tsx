@@ -4,7 +4,7 @@ import { Card, Button, Input, Badge } from '../components/shared';
 import { MOCK_CONVERSATIONS, MOCK_CONTACTS } from '../constants';
 import { Conversation, Message, Contact } from '../types';
 import {
-    Search, User, MoreVertical, X, Tag, Plus, CheckCheck, Send, Smile, Paperclip, FileText
+    Search, User, MoreVertical, X, Tag, Plus, CheckCheck, Send, Smile, Paperclip, FileText, AlertCircle
 } from 'lucide-react';
 
 const Messages: React.FC = () => {
@@ -152,8 +152,25 @@ const Messages: React.FC = () => {
                                 <p className="text-sm text-gray-800">{msg.text}</p>
                                 <div className="flex justify-end items-center gap-1 mt-1">
                                     <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
-                                    {msg.direction === 'outbound' && <CheckCheck size={14} className={msg.status === 'read' ? 'text-blue-400' : 'text-gray-300'} />}
+                                    {msg.direction === 'outbound' && (
+                                        <CheckCheck 
+                                            size={14} 
+                                            className={
+                                                msg.status === 'read' ? 'text-blue-400' : 
+                                                msg.status === 'failed' ? 'text-red-400' : 
+                                                'text-gray-300'
+                                            } 
+                                        />
+                                    )}
                                 </div>
+                                {msg.status === 'failed' && msg.failureReason && (
+                                    <div className="mt-2 p-2 bg-red-50/50 rounded-lg border border-red-100 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                                        <AlertCircle size={12} className="text-red-500 mt-0.5 shrink-0" />
+                                        <p className="text-[10px] text-red-600 font-semibold leading-relaxed">
+                                            {msg.failureReason}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

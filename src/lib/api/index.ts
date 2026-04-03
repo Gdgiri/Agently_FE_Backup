@@ -11,4 +11,5 @@ export { aiApi, campaignApi, webhookApi, ragApi, tenantApi } from './miscApi';
 export { leadIntelligenceApi } from './leadIntelligenceApi';
 export { botStudioApi } from './botStudioApi';
 export { webhookOrderApi } from './webhookOrderApi';
+export { mediaApi } from './mediaApi';
 export type { WebhookOrder } from './webhookOrderApi';

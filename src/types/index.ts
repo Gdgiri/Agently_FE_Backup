@@ -67,6 +67,8 @@ export interface Tenant {
     stripeEnabled?: boolean;
     stripeSecretKey?: string;
     stripeWebhookSecret?: string;
+    welcomeImageUrl?: string;
+    welcomeMessage?: string;
 }
 
 // --- CHAT & MESSAGING ---
@@ -87,6 +89,7 @@ export interface Message {
     interactiveData?: any; // For buttons, lists etc
     channel?: 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'TELEGRAM' | 'EMAIL';
     aiIntents?: string[]; // New: For AI reasoning badges
+    failureReason?: string;
 }
 
 export interface Conversation {
@@ -218,6 +221,19 @@ export interface Appointment {
     endTime: string;
     status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
     notes?: string;
+}
+
+export interface Staff {
+    id: string;
+    name: string;
+    role?: string;
+    phoneNumber?: string;
+    isActive: boolean;
+    tenantId: string;
+    _count?: {
+        appointments: number;
+        mapLeads: number;
+    }
 }
 
 // --- ANALYTICS ---
